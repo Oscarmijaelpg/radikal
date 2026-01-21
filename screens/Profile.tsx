@@ -1,12 +1,46 @@
-import React from 'react';
-import { CURRENT_USER } from '../constants';
-import { Edit2, User, Settings, Bell, LogOut } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
+import { Edit2, User, Settings, Bell, LogOut, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../src/lib/supabase';
 
-interface Props {
-  onLogout: () => void;
-}
+const Profile: React.FC = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
-const Profile: React.FC<Props> = ({ onLogout }) => {
+  useEffect(() => {
+    if (user) {
+      // Fetch additional profile data if needed, or rely on metadata
+      // The trigger updates the public.users table, but Auth metadata is in user.user_metadata
+      // Let's rely on user_metadata for now as it's immediate from the session
+      setProfileData({
+        name: user.user_metadata?.full_name || 'Usuario',
+        company: user.user_metadata?.company_name || 'Empresa',
+        role: 'Admin', // Default role or fetch from DB
+        avatar: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256',
+        email: user.email
+      });
+    }
+  }, [user]);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user || !profileData) {
+    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-primary" /></div>;
+  }
+
   return (
     <div className="p-6 lg:p-12 animate-fade-in max-w-5xl mx-auto">
       <header className="mb-12">
@@ -25,7 +59,7 @@ const Profile: React.FC<Props> = ({ onLogout }) => {
             <div className="relative mb-6">
               <div className="w-32 h-32 rounded-full p-1 bg-white border-4 border-slate-50 shadow-inner">
                 <img
-                  src={CURRENT_USER.avatar}
+                  src={profileData.avatar}
                   alt="Profile"
                   className="w-full h-full rounded-full object-cover"
                 />
@@ -35,8 +69,8 @@ const Profile: React.FC<Props> = ({ onLogout }) => {
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold text-black mb-1">{CURRENT_USER.name}</h2>
-            <p className="text-slate-500 font-medium mb-8">{CURRENT_USER.role} at {CURRENT_USER.company}</p>
+            <h2 className="text-2xl font-bold text-black mb-1">{profileData.name}</h2>
+            <p className="text-slate-500 font-medium mb-8">{profileData.role} at {profileData.company}</p>
 
             <div className="w-full space-y-4">
               <div className="flex items-center justify-between px-5 py-4 bg-slate-50 rounded-2xl text-sm font-medium border border-slate-100">
@@ -66,13 +100,13 @@ const Profile: React.FC<Props> = ({ onLogout }) => {
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Nombre Completo</label>
-                  <input type="text" defaultValue={CURRENT_USER.name} className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 font-bold focus:outline-none focus:border-primary focus:bg-white transition-all" />
+                  <input type="text" defaultValue={profileData.name} className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 font-bold focus:outline-none focus:border-primary focus:bg-white transition-all" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Email</label>
                   <input
                     type="email"
-                    defaultValue="ventolini@radikal.ai"
+                    defaultValue={profileData.email}
                     readOnly
                     className="w-full px-5 py-4 rounded-2xl bg-slate-100 border-2 border-slate-100 text-slate-500 font-bold focus:outline-none cursor-not-allowed transition-all select-none"
                   />
@@ -113,11 +147,12 @@ const Profile: React.FC<Props> = ({ onLogout }) => {
             </div>
 
             <button
-              onClick={onLogout}
-              className="w-full py-5 border-2 border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all group"
+              onClick={handleLogout}
+              disabled={loading}
+              className="w-full py-5 border-2 border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all group disabled:opacity-50"
             >
-              <LogOut className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              Cerrar Sesión
+              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <LogOut className="w-6 h-6 group-hover:scale-110 transition-transform" />}
+              {loading ? 'Cerrando sesión...' : 'Cerrar Sesión'}
             </button>
           </div>
         </div>

@@ -1,10 +1,51 @@
-import React from 'react';
-import { ArrowLeft, UserPlus, ArrowRight } from 'lucide-react';
-
+import React, { useState } from 'react';
+import { ArrowLeft, UserPlus, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../src/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [company, setCompany] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            company_name: company,
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      // Upon successful registration, Supabase automatically logs the user in (if confirmation is not required)
+      // or sends a confirmation email. 
+      // We can redirect to onboarding or a check-email page.
+      // For now, let's assume we want to go manually or let the effect handle it if session exists.
+      // But usually for registration we might want to show a success message if email confirmation is on.
+      // Assuming auto-login or immediate redirect:
+      navigate('/onboarding');
+
+    } catch (err: any) {
+      setError(err.message || 'Error al registrarte');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-6 relative overflow-hidden">
       {/* Back Button */}
@@ -33,13 +74,23 @@ const Register: React.FC = () => {
           </p>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); navigate('/onboarding'); }} className="space-y-4">
+        {error && (
+          <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-3 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleRegister} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Nombre</label>
               <input
                 type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Juan Pérez"
+                required
                 className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white transition-all font-medium"
               />
             </div>
@@ -47,6 +98,8 @@ const Register: React.FC = () => {
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Empresa</label>
               <input
                 type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
                 placeholder="Empresa S.A."
                 className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white transition-all font-medium"
               />
@@ -57,7 +110,10 @@ const Register: React.FC = () => {
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Email Profesional</label>
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="nombre@empresa.com"
+              required
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white transition-all font-medium"
             />
           </div>
@@ -66,13 +122,16 @@ const Register: React.FC = () => {
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Contraseña</label>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              required
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white transition-all font-medium"
             />
           </div>
 
           <div className="flex items-center gap-3 py-2">
-            <input type="checkbox" id="terms" className="w-5 h-5 rounded-lg border-2 border-slate-300 text-primary focus:ring-primary/20" />
+            <input type="checkbox" id="terms" required className="w-5 h-5 rounded-lg border-2 border-slate-300 text-primary focus:ring-primary/20" />
             <label htmlFor="terms" className="text-sm text-slate-500 font-medium cursor-pointer select-none">
               Acepto los <span className="text-black font-bold hover:underline">Términos</span> y la <span className="text-black font-bold hover:underline">Privacidad</span>
             </label>
@@ -80,10 +139,17 @@ const Register: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-4 bg-black hover:bg-slate-800 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4"
+            disabled={loading}
+            className="w-full py-4 bg-black hover:bg-slate-800 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Registrarse
-            <ArrowRight className="w-6 h-6" />
+            {loading ? (
+              <Loader2 className="w-6 h-6 animate-spin" />
+            ) : (
+              <>
+                Registrarse
+                <ArrowRight className="w-6 h-6" />
+              </>
+            )}
           </button>
         </form>
 

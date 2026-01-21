@@ -11,10 +11,17 @@ import {
   LucideIcon
 } from 'lucide-react';
 
+import { useAuth } from '../src/context/AuthContext';
+
 const Sidebar: React.FC = () => {
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const userName = user?.user_metadata?.full_name || 'Usuario';
+  const userRole = 'Admin'; // Or fetch from profile
+  const userAvatar = user?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256';
 
   const navItems: { path: string; label: string; icon: LucideIcon; activeMatch: string[] }[] = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, activeMatch: ['/dashboard'] },
@@ -70,13 +77,13 @@ const Sidebar: React.FC = () => {
           className={`w-full bg-slate-50 p-4 rounded-2xl flex items-center gap-3 border border-slate-100 transition-all hover:bg-pink-50 hover:border-primary/20 hover:shadow-md text-left group outline-none ${currentPath === '/profile' ? 'ring-2 ring-primary ring-offset-2 border-primary/20' : ''}`}
         >
           <img
-            src={CURRENT_USER.avatar}
+            src={userAvatar}
             alt="User"
             className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm group-hover:scale-105 transition-transform"
           />
           <div className="hidden lg:block overflow-hidden">
-            <p className="text-sm font-bold text-slate-900 truncate">{CURRENT_USER.name}</p>
-            <p className="text-xs text-slate-500 font-medium">{CURRENT_USER.role}</p>
+            <p className="text-sm font-bold text-slate-900 truncate">{userName}</p>
+            <p className="text-xs text-slate-500 font-medium">{userRole}</p>
           </div>
           <div className="ml-auto text-slate-400 group-hover:text-primary transition-colors hidden lg:block">
             <ChevronRight className="w-5 h-5" />

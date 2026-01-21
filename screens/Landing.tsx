@@ -12,9 +12,20 @@ import {
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../src/context/AuthContext';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleStart = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/register');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden bg-grid-pattern font-sans">
 
@@ -34,10 +45,10 @@ const Landing: React.FC = () => {
               <a className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors cursor-pointer">Empresas</a>
               <a className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors cursor-pointer">Precios</a>
               <button
-                onClick={() => navigate('/register')}
+                onClick={handleStart}
                 className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-sm glow-button transition-all"
               >
-                Empieza Ahora
+                {user ? 'Ir al Dashboard' : 'Empieza Ahora'}
               </button>
             </div>
           </div>
@@ -73,10 +84,10 @@ const Landing: React.FC = () => {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => navigate('/register')}
+                  onClick={handleStart}
                   className="bg-primary text-white px-10 py-4 rounded-xl font-extrabold text-lg glow-button flex items-center justify-center gap-2 transition-all hover:-translate-y-1"
                 >
-                  Empieza Ahora <Rocket className="w-6 h-6" />
+                  {user ? 'Ir al Dashboard' : 'Empieza Ahora'} <Rocket className="w-6 h-6" />
                 </button>
                 <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-10 py-4 rounded-xl font-bold text-lg transition-all shadow-sm flex items-center justify-center gap-2">
                   Ver Demo
@@ -201,10 +212,10 @@ const Landing: React.FC = () => {
             </p>
             <div className="relative z-10">
               <button
-                onClick={() => navigate('/register')}
+                onClick={handleStart}
                 className="bg-white text-primary px-12 py-5 rounded-2xl font-black text-xl hover:scale-105 transition-transform shadow-xl"
               >
-                Solicitar Acceso VIP
+                {user ? 'Continuar' : 'Solicitar Acceso VIP'}
               </button>
             </div>
           </div>

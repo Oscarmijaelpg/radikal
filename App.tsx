@@ -1,5 +1,6 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, useLocation, Outlet } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Toaster } from 'sonner';
+import { BrowserRouter, Routes, Route, useLocation, Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './screens/Dashboard';
 import Login from './screens/Login';
@@ -15,6 +16,7 @@ import RadarScanning from './screens/RadarScanning';
 import RadarResults from './screens/RadarResults';
 import Profile from './screens/Profile';
 import Landing from './screens/Landing';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 // Layout component to handle Sidebar visibility
 const AppLayout = () => {
@@ -44,36 +46,94 @@ const AppLayout = () => {
   );
 };
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading, hasBrand } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // ✅ SIEMPRE PERMITIR estas rutas (son flujos especiales)
+  const alwaysAllowedRoutes = ['/scanning', '/brand', '/radar-scanning', '/radar-results'];
+  if (alwaysAllowedRoutes.includes(location.pathname)) {
+    return <>{children}</>;
+  }
+
+  // Si user NO tiene brand → forzar a onboarding (excepto si ya está ahí)
+  if (!hasBrand && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // Si user SÍ tiene brand y trata de ir a onboarding → dashboard
+  if (hasBrand && location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading, hasBrand } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (user) {
+    // Redirect based on brand status
+    return <Navigate to={hasBrand ? "/dashboard" : "/onboarding"} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        {/* Public Routes */}
+        <Route path="/" element={<Landing />} />
+
+        {/* Auth Routes (Redirect to Dashboard if logged in) */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+
+        {/* Protected Routes */}
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route path="/scanning" element={<ProtectedRoute><Scanning /></ProtectedRoute>} />
+        <Route path="/radar-scanning" element={<ProtectedRoute><RadarScanning /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/generation" element={<ProtectedRoute><ContentGen /></ProtectedRoute>} />
+        <Route path="/radar" element={<ProtectedRoute><RadarConfig /></ProtectedRoute>} />
+        <Route path="/radar-results" element={<ProtectedRoute><RadarResults /></ProtectedRoute>} />
+        <Route path="/brand" element={<ProtectedRoute><BrandAnalysis /></ProtectedRoute>} />
+        <Route path="/brand-results" element={<ProtectedRoute><BrandResults /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      </Route>
+    </Routes>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          {/* Public / Auth Flow */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-
-          {/* Immersive Scanning */}
-          <Route path="/scanning" element={<Scanning />} />
-          <Route path="/radar-scanning" element={<RadarScanning />} />
-
-          {/* Main App */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/generation" element={<ContentGen />} />
-
-          {/* Radar Flow */}
-          <Route path="/radar" element={<RadarConfig />} />
-          <Route path="/radar-results" element={<RadarResults />} />
-
-          {/* Brand Flow */}
-          <Route path="/brand" element={<BrandAnalysis />} />
-          <Route path="/brand-results" element={<BrandResults />} />
-
-          <Route path="/profile" element={<Profile />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster position="top-center" richColors />
+      </AuthProvider>
     </BrowserRouter>
   );
 };

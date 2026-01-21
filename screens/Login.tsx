@@ -1,10 +1,38 @@
-import React from 'react';
-import { ArrowLeft, Zap, ArrowRight } from 'lucide-react';
-
+import React, { useState } from 'react';
+import { ArrowLeft, Zap, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../src/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Navigation is handled by the OnAuthStateChange listener in AuthContext/App
+      // but we can also force it here to be explicit/faster feeling
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-6 relative overflow-hidden">
       {/* Back Button */}
@@ -34,12 +62,22 @@ const Login: React.FC = () => {
           Tu inteligencia de marca, simplificada.
         </p>
 
-        <form onSubmit={(e) => { e.preventDefault(); navigate('/dashboard'); }} className="space-y-5">
+        {error && (
+          <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-3 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Email</label>
             <input
               type="email"
-              defaultValue="ventolini@radikal.ai"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com"
+              required
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white transition-all font-medium"
             />
           </div>
@@ -47,17 +85,27 @@ const Login: React.FC = () => {
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Contraseña</label>
             <input
               type="password"
-              defaultValue="password123"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white transition-all font-medium"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-4 bg-black hover:bg-slate-800 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            disabled={loading}
+            className="w-full py-4 bg-black hover:bg-slate-800 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Iniciar Sesión
-            <ArrowRight className="w-6 h-6" />
+            {loading ? (
+              <Loader2 className="w-6 h-6 animate-spin" />
+            ) : (
+              <>
+                Iniciar Sesión
+                <ArrowRight className="w-6 h-6" />
+              </>
+            )}
           </button>
         </form>
 
@@ -66,7 +114,7 @@ const Login: React.FC = () => {
           <div className="relative flex justify-center text-sm"><span className="px-4 bg-white text-slate-400 uppercase font-bold tracking-widest text-[10px]">O continúa con</span></div>
         </div>
 
-        <button className="w-full py-4 bg-white border-2 border-slate-100 hover:border-slate-200 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-slate-50 mb-6">
+        <button className="w-full py-4 bg-white border-2 border-slate-100 hover:border-slate-200 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-slate-50 mb-6 disable-opacity-50">
           <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
           Google Workspace
         </button>

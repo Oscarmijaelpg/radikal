@@ -1,14 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Terminal, Globe, Search, Palette, Brain, Zap } from 'lucide-react';
+import { Terminal, Globe, Search, Palette, Brain, Zap, AlertCircle } from 'lucide-react';
 import StatusItem from '../components/StatusItem';
-
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../src/lib/supabase';
+import { toast } from 'sonner';
 
 const Scanning: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { brand_id, job_id } = location.state || {};
+
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<React.ReactNode[]>([]);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const hasNavigatedRef = useRef(false);
+
   const radius = 34;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -25,34 +32,109 @@ const Scanning: React.FC = () => {
     { pct: 95, content: <><span className="text-white font-mono flex items-center gap-1"><span className="text-slate-600 mr-2">&gt;</span> Finalizando reporte... <span className="w-2 h-4 bg-emerald-400 animate-blink inline-block"></span></span></> },
   ];
 
+  // Validar datos requeridos
   useEffect(() => {
-    let currentStepIndex = 0;
+    if (!brand_id || !job_id) {
+      console.error('❌ Faltan brand_id o job_id en Scanning');
+      toast.error('Datos de sesión inválidos. Redirigiendo...');
+      setTimeout(() => navigate('/dashboard'), 2000);
+    }
+  }, [brand_id, job_id, navigate]);
+
+  // Suscripción a cambios en el job
+  useEffect(() => {
+    if (!job_id || !brand_id) return;
+
+    console.log('📡 Suscribiéndose a job updates:', job_id);
     setLogs([<div key="init" className="text-emerald-400 font-bold font-mono">$ radikal-cli analyze --target=current --deep</div>]);
 
+    const channel = supabase
+      .channel(`job-${job_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'job_queue',
+          filter: `id=eq.${job_id}`,
+        },
+        (payload) => {
+          console.log('📨 Job update recibido:', payload);
+          const newStatus = payload.new.status;
+
+          if (newStatus === 'completed' && !hasNavigatedRef.current) {
+            hasNavigatedRef.current = true;
+            setProgress(100);
+            setLogs(prev => [...prev, <div key="done" className="text-emerald-400 font-bold font-mono">$ FINISHED: Analysis complete.</div>]);
+
+            toast.success('¡Diagnóstico completado!');
+
+            setTimeout(() => {
+              navigate('/brand', {
+                state: { brand_id },
+                replace: true
+              });
+            }, 1500);
+          } else if (newStatus === 'failed' && !hasNavigatedRef.current) {
+            hasNavigatedRef.current = true;
+            setLogs(prev => [...prev, <div key="error" className="text-red-500 font-bold font-mono">$ ERROR: Analysis failed.</div>]);
+
+            toast.error('El análisis falló. Por favor intenta nuevamente.');
+
+            setTimeout(() => {
+              navigate('/dashboard', { replace: true });
+            }, 2000);
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Suscrito correctamente al canal');
+          setIsSubscribed(true);
+        }
+      });
+
+    // Animación visual de progreso
+    let currentStepIndex = 0;
     const interval = setInterval(() => {
       if (currentStepIndex >= logSteps.length) {
         clearInterval(interval);
-        // Navigate to results
-        setTimeout(() => navigate('/brand'), 1000);
         return;
       }
 
       const step = logSteps[currentStepIndex];
-      // Smoother progress update
-      setProgress(step.pct);
-      setLogs(prev => [...prev, <div key={currentStepIndex} className="animate-fade-in">{step.content}</div>]);
+      if (step.pct <= 90) {
+        setProgress(step.pct);
+        setLogs(prev => [...prev, <div key={currentStepIndex} className="animate-fade-in">{step.content}</div>]);
+      }
       currentStepIndex++;
-    }, 800);
+    }, 1500);
 
-    return () => clearInterval(interval);
-  }, [navigate]);
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      console.log('🧹 Limpiando suscripción');
+      supabase.removeChannel(channel);
+    };
+  }, [job_id, brand_id, navigate]);
 
-  // Auto scroll to bottom of logs
+  // Auto scroll logs
   useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  // Mostrar error si no hay datos
+  if (!brand_id || !job_id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Error de sesión</h2>
+          <p className="text-slate-600">Datos de diagnóstico no encontrados. Redirigiendo...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 dark:bg-[#0F172A] min-h-screen text-slate-900 dark:text-white font-display transition-colors duration-500 overflow-hidden relative">
@@ -76,6 +158,14 @@ const Scanning: React.FC = () => {
           <p className="text-slate-500 dark:text-slate-400 text-lg md:text-xl font-medium max-w-2xl">
             Nuestro motor de IA está auditando tus activos digitales en tiempo real para generar un diagnóstico estratégico personalizado.
           </p>
+
+          {/* Connection Status */}
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700">
+            <span className={`w-2 h-2 rounded-full ${isSubscribed ? 'bg-emerald-500 animate-pulse' : 'bg-yellow-500'}`}></span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              {isSubscribed ? 'Conectado en tiempo real' : 'Conectando...'}
+            </span>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
@@ -85,7 +175,6 @@ const Scanning: React.FC = () => {
 
             {/* Progress Metric Card */}
             <div className="bg-white dark:bg-slate-800/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-700/50 relative overflow-hidden">
-              {/* Decorative background circle */}
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-slate-50 dark:bg-slate-700/30 rounded-full blur-2xl"></div>
 
               <div className="flex justify-between items-start mb-8 relative z-10">
@@ -209,8 +298,5 @@ const Scanning: React.FC = () => {
     </div>
   );
 };
-
-// Helper component for checklist items
-// StatusItem extracted to components
 
 export default Scanning;
