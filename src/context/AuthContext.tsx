@@ -8,6 +8,7 @@ interface AuthContextType {
     loading: boolean;
     hasBrand: boolean | null;
     refreshBrand: () => Promise<void>;
+    refreshSession: () => Promise<void>;
     signOut: () => Promise<void>;
 }
 
@@ -160,6 +161,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const refreshSession = async () => {
+        console.log('🔄 Forzando actualización de sesión...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session) {
+            setSession(session);
+            setUser(session.user);
+            await checkBrand(session.user.id);
+        } else {
+            setSession(null);
+            setUser(null);
+            setHasBrand(false);
+        }
+    };
+
     const value = {
         session,
         user,
@@ -167,6 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasBrand,
         signOut,
         refreshBrand,
+        refreshSession
     };
 
     // Log del estado actual cuando cambia

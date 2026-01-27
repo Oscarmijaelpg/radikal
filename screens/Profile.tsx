@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../src/context/AuthContext';
 import { Edit2, User, Settings, Bell, LogOut, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../src/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 
 const Profile: React.FC = () => {
   const { user, signOut } = useAuth();

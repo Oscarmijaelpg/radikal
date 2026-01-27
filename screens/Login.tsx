@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Zap, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../src/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../src/context/AuthContext';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { user, hasBrand, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,15 +26,27 @@ const Login: React.FC = () => {
 
       if (error) throw error;
 
-      // Navigation is handled by the OnAuthStateChange listener in AuthContext/App
-      // but we can also force it here to be explicit/faster feeling
-      navigate('/dashboard');
+      // Set flag to indicate successful login
+      // Navigation will be handled by useEffect after auth state updates
+      setJustLoggedIn(true);
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
-    } finally {
       setLoading(false);
     }
   };
+
+  // Handle navigation after successful login
+  useEffect(() => {
+    if (justLoggedIn && user && !authLoading && hasBrand !== null) {
+      // Auth state has been updated, now we can navigate
+      setLoading(false); // Stop loading spinner
+      if (hasBrand) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
+    }
+  }, [justLoggedIn, user, hasBrand, authLoading, navigate]);
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-6 relative overflow-hidden">

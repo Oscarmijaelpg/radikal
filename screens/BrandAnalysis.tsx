@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { supabase } from '../src/lib/supabase';
-import { CheckCircle, FileText, Globe, LayoutGrid, Palette, Search } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '@/src/lib/supabase';
+import { CheckCircle, FileText, Globe, LayoutGrid, Palette, Search, RefreshCw } from 'lucide-react';
 import TagInput from '../components/TagInput';
 import SectionCard from '../components/SectionCard';
 import ColorPicker from '../components/ColorPicker';
@@ -72,10 +72,12 @@ const BrandAnalysis: React.FC = () => {
   const [loadingSection, setLoadingSection] = useState<{ [key: string]: boolean }>({});
 
   const location = useLocation();
+  const navigate = useNavigate();
   const { brand_id: stateBrandId } = location.state || {};
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [brandId, setBrandId] = useState<string | null>(stateBrandId || null);
+  const [isRunningDiagnostic, setIsRunningDiagnostic] = useState(false);
 
   // State for Logo
   const [logoData, setLogoData] = useState<{ url: string | null; base64: string | null }>({ url: null, base64: null });
@@ -281,6 +283,90 @@ const BrandAnalysis: React.FC = () => {
     setLogoData({ url: null, base64: null });
   };
 
+  const handleRunDiagnostic = async () => {
+    if (!brandId) {
+      toast.error('No se encontró el ID de la marca');
+      return;
+    }
+
+    setIsRunningDiagnostic(true);
+
+    try {
+      console.log('🚀 Iniciando nuevo diagnóstico...');
+
+      // Usar los datos actuales del estado en lugar de consultar la base de datos
+      // Esto evita errores de columnas inexistentes y usa la información más reciente
+      const diagnosticData = {
+        website: socials.website,
+        linkedin: socials.instagram, // Nota: parece que linkedin se mapea a instagram en el estado
+        instagram: socials.instagram,
+        facebook: socials.facebook,
+        tiktok: socials.tiktok,
+      };
+
+      console.log('📤 Enviando datos al edge function:', diagnosticData);
+
+      // Llamar al edge function complete-onboarding
+      const { data, error } = await supabase.functions.invoke(
+        'complete-onboarding',
+        {
+          body: diagnosticData,
+        }
+      );
+
+      if (error) {
+        console.error('❌ Error del Edge Function:', error);
+        throw new Error(error.message || 'Error al procesar la solicitud');
+      }
+
+      console.log('✅ Respuesta del edge function:', data);
+      console.log('🔍 Tipo de data:', typeof data);
+      console.log('🔍 data completo (JSON):', JSON.stringify(data, null, 2));
+
+      if (!data?.success) {
+        console.error('❌ Edge function retornó success=false');
+        console.error('❌ data.success:', data?.success);
+        console.error('❌ data.error:', data?.error);
+        throw new Error(data?.error || 'Error desconocido en el servidor');
+      }
+
+      console.log('🔍 Verificando brand_id y job_id...');
+      console.log('🔍 data.brand_id:', data.brand_id, '(tipo:', typeof data.brand_id, ')');
+      console.log('🔍 data.job_id:', data.job_id, '(tipo:', typeof data.job_id, ')');
+
+      if (!data?.brand_id || !data?.job_id) {
+        console.error('❌ Respuesta del servidor incompleta');
+        console.error('❌ Falta brand_id:', !data?.brand_id);
+        console.error('❌ Falta job_id:', !data?.job_id);
+        throw new Error('Respuesta del servidor incompleta: faltan brand_id o job_id');
+      }
+
+      toast.success('¡Diagnóstico iniciado!');
+
+      // Navegar a la pantalla de Scanning con los IDs
+      console.log('🚀 Preparando navegación a Scanning...');
+      console.log('📦 State a enviar:', {
+        brand_id: data.brand_id,
+        job_id: data.job_id,
+      });
+
+      navigate('/scanning', {
+        state: {
+          brand_id: data.brand_id,
+          job_id: data.job_id,
+        },
+      });
+
+      console.log('✅ Navegación ejecutada');
+    } catch (error: any) {
+      console.error('❌ Error en diagnóstico:', error);
+      toast.error(error.message || 'Error al iniciar el diagnóstico. Por favor intenta nuevamente.');
+    } finally {
+      setIsRunningDiagnostic(false);
+    }
+  };
+
+
   const handleSave = async (section: string) => {
     if (!brandId) return;
 
@@ -433,14 +519,35 @@ const BrandAnalysis: React.FC = () => {
 
   return (
     <div className="p-6 lg:p-10 animate-fade-in font-display max-w-7xl mx-auto">
-      <header className="mb-10 flex items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="w-16 h-16 bg-primary/10 flex items-center justify-center rounded-2xl shadow-sm border border-primary/20">
-          <CheckCircle className="text-primary w-8 h-8" />
+      <header className="mb-10 flex items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 bg-primary/10 flex items-center justify-center rounded-2xl shadow-sm border border-primary/20">
+            <CheckCircle className="text-primary w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Análisis de Marca</h1>
+            <p className="text-slate-500 mt-1 text-lg">Resultados del diagnóstico para <span className="font-bold text-slate-900">{brandName}</span>.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Análisis de Marca</h1>
-          <p className="text-slate-500 mt-1 text-lg">Resultados del diagnóstico para <span className="font-bold text-slate-900">{brandName}</span>.</p>
-        </div>
+
+        {/* Botón de Nuevo Diagnóstico */}
+        <button
+          onClick={handleRunDiagnostic}
+          disabled={isRunningDiagnostic}
+          className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
+        >
+          {isRunningDiagnostic ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Iniciando...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-5 h-5" />
+              Nuevo Diagnóstico
+            </>
+          )}
+        </button>
       </header>
 
       <div className="grid grid-cols-12 gap-6">

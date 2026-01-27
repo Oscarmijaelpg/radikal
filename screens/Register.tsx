@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowLeft, UserPlus, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../src/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../src/context/AuthContext';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +20,7 @@ const Register: React.FC = () => {
     setError(null);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -31,17 +33,22 @@ const Register: React.FC = () => {
 
       if (signUpError) throw signUpError;
 
-      // Upon successful registration, Supabase automatically logs the user in (if confirmation is not required)
-      // or sends a confirmation email. 
-      // We can redirect to onboarding or a check-email page.
-      // For now, let's assume we want to go manually or let the effect handle it if session exists.
-      // But usually for registration we might want to show a success message if email confirmation is on.
-      // Assuming auto-login or immediate redirect:
-      navigate('/onboarding');
+      if (data.session) {
+        console.log('✅ Registro exitoso. Actualizando sesión...');
+        // Forzamos actualización del contexto antes de navegar
+        await refreshSession();
+
+        console.log('🔄 Navegando a onboarding...');
+        navigate('/onboarding', { replace: true });
+        return;
+      } else {
+        // En caso de requerir confirmación de email
+        setError('Registro exitoso. Por favor verifica tu correo para continuar.');
+        setLoading(false);
+      }
 
     } catch (err: any) {
       setError(err.message || 'Error al registrarte');
-    } finally {
       setLoading(false);
     }
   };

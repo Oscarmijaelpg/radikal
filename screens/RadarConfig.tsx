@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CustomDropdown from '../components/CustomDropdown';
 import DynamicList from '../components/DynamicList';
-import { Search, Globe, Rss, CalendarClock, Mail } from 'lucide-react';
-
+import { Search, Globe, Rss, CalendarClock, Mail, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/src/context/AuthContext';
+import { supabase } from '@/src/lib/supabase';
+import { toast } from 'sonner';
 
 const RadarConfig: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Brand ID
+  const [brandId, setBrandId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // State for dynamic lists
   const [competitors, setCompetitors] = useState<string[]>([]);
@@ -26,17 +33,108 @@ const RadarConfig: React.FC = () => {
 
   const handleSetEmails = (newEmails: string[]) => {
     setEmails(newEmails);
-    // Clear errors when user modifies the list
     if (emailErrors.length > 0) {
       setEmailErrors([]);
     }
   };
 
-  const onSearch = () => {
+  // Obtener brand_id al montar
+  useEffect(() => {
+    const fetchBrandId = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('brands')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setBrandId(data.id);
+          // Cargar settings existentes si hay
+          loadExistingSettings(data.id);
+        }
+      } catch (error) {
+        console.error('Error obteniendo brand_id:', error);
+      }
+    };
+
+    fetchBrandId();
+  }, [user]);
+
+  // Cargar settings existentes
+  const loadExistingSettings = async (brand_id: string) => {
+    console.log('🔍 Cargando settings para brand_id:', brand_id);
+
+    // Cargar competidores desde competitor suggestions
+    try {
+      const { data: competitorData, error: competitorError } = await supabase
+        .from('competitor suggestions')
+        .select('link')
+        .eq('brand_id', brand_id)
+        .order('created_at', { ascending: false });
+
+      console.log('📊 Respuesta de competidores:', {
+        data: competitorData,
+        error: competitorError,
+        count: competitorData?.length
+      });
+
+      if (competitorError) {
+        console.error('❌ Error cargando competidores:', competitorError);
+      } else if (competitorData && competitorData.length > 0) {
+        const competitorLinks = competitorData.map(c => c.link).filter(Boolean) as string[];
+        if (competitorLinks.length > 0) {
+          setCompetitors(competitorLinks);
+          console.log('✅ Competidores cargados:', competitorLinks);
+        }
+      } else {
+        console.log('ℹ️ No hay competidores guardados');
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar competidores:', error);
+    }
+
+    // Cargar otros settings desde radar_settings
+    try {
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('radar_settings')
+        .select('news_channels, emails, timeframe')
+        .eq('brand_id', brand_id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(); // Cambiado de .single() a .maybeSingle() para evitar error si no hay datos
+
+      if (settingsError) {
+        console.error('❌ Error cargando settings:', settingsError);
+      } else if (settingsData) {
+        if (settingsData.news_channels && settingsData.news_channels.length > 0) {
+          setNewsChannels(settingsData.news_channels);
+        }
+        if (settingsData.emails && settingsData.emails.length > 0) {
+          setEmails(settingsData.emails);
+        }
+        if (settingsData.timeframe) {
+          setTimeframe(settingsData.timeframe);
+        }
+        console.log('✅ Settings cargados:', settingsData);
+      } else {
+        console.log('ℹ️ No hay settings guardados, usando valores por defecto');
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar settings:', error);
+    }
+  };
+
+  const onSearch = async () => {
     const newErrors: (string | undefined)[] = [];
     let hasError = false;
 
-    // Validate if at least one email exists and is not empty
+    // Validar emails
     const filledEmails = emails.filter(e => e.trim() !== '');
     if (filledEmails.length === 0) {
       if (emails.length > 0) {
@@ -45,7 +143,6 @@ const RadarConfig: React.FC = () => {
       hasError = true;
     }
 
-    // Validate each email format
     emails.forEach((email, index) => {
       if (email.trim() && !validateEmail(email)) {
         newErrors[index] = "Formato de correo inválido.";
@@ -57,8 +154,24 @@ const RadarConfig: React.FC = () => {
 
     if (hasError) return;
 
-    // If validations pass
-    navigate('/radar-scanning');
+    if (!brandId) {
+      toast.error('No se encontró una marca asociada');
+      return;
+    }
+
+    // Navegar inmediatamente a scanning con todos los datos
+    // RadarScanning se encargará de guardar settings y generar análisis
+    navigate('/radar-scanning', {
+      state: {
+        brand_id: brandId,
+        settings: {
+          competitors: competitors.filter(c => c.trim()),
+          news_channels: newsChannels.filter(n => n.trim()),
+          emails: filledEmails,
+          timeframe: timeframe
+        }
+      }
+    });
   };
 
   return (

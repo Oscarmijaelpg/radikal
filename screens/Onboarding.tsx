@@ -1,9 +1,20 @@
-import React, { useState } from 'react';
-import { supabase } from '../src/lib/supabase';
-import { useAuth } from '../src/context/AuthContext';
-import { Zap, Globe, Fingerprint, Briefcase, AtSign, Camera, Facebook, Film, Wand2, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { supabase } from "@/src/lib/supabase";
+import { useAuth } from "@/src/context/AuthContext";
+import {
+  Zap,
+  Globe,
+  Fingerprint,
+  Briefcase,
+  AtSign,
+  Camera,
+  Facebook,
+  Film,
+  Wand2,
+  AlertCircle,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Onboarding: React.FC = () => {
   const navigate = useNavigate();
@@ -13,19 +24,19 @@ const Onboarding: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const [formData, setFormData] = useState({
-    website: '',
-    tax_id: '',
-    linkedin: '',
-    twitter: '',
-    instagram: '',
-    facebook: '',
-    tiktok: ''
+    website: "",
+    tax_id: "",
+    linkedin: "",
+    twitter: "",
+    instagram: "",
+    facebook: "",
+    tiktok: "",
   });
 
   const isValidUrl = (url: string): boolean => {
     if (!url) return true;
     try {
-      const urlToTest = url.startsWith('http') ? url : `https://${url}`;
+      const urlToTest = url.startsWith("http") ? url : `https://${url}`;
       new URL(urlToTest);
       return true;
     } catch {
@@ -34,8 +45,8 @@ const Onboarding: React.FC = () => {
   };
 
   const normalizeUrl = (url: string): string => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) {
       return url;
     }
     return `https://${url}`;
@@ -44,13 +55,13 @@ const Onboarding: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
     if (errors[name]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name];
         return newErrors;
@@ -62,16 +73,22 @@ const Onboarding: React.FC = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.website.trim()) {
-      newErrors.website = 'El sitio web es obligatorio';
+      newErrors.website = "El sitio web es obligatorio";
     } else if (!isValidUrl(formData.website)) {
-      newErrors.website = 'Por favor ingresa una URL válida';
+      newErrors.website = "Por favor ingresa una URL válida";
     }
 
-    const urlFields = ['linkedin', 'twitter', 'instagram', 'facebook', 'tiktok'];
-    urlFields.forEach(field => {
+    const urlFields = [
+      "linkedin",
+      "twitter",
+      "instagram",
+      "facebook",
+      "tiktok",
+    ];
+    urlFields.forEach((field) => {
       const value = formData[field as keyof typeof formData];
       if (value && !isValidUrl(value)) {
-        newErrors[field] = 'URL inválida';
+        newErrors[field] = "URL inválida";
       }
     });
 
@@ -83,70 +100,84 @@ const Onboarding: React.FC = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Por favor corrige los errores en el formulario');
+      toast.error("Por favor corrige los errores en el formulario");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      console.log('🚀 Iniciando onboarding...');
+      console.log("🚀 Iniciando onboarding...");
 
       const normalizedData = {
         website: normalizeUrl(formData.website),
         tax_id: formData.tax_id.trim() || undefined,
-        linkedin: formData.linkedin ? normalizeUrl(formData.linkedin) : undefined,
+        linkedin: formData.linkedin
+          ? normalizeUrl(formData.linkedin)
+          : undefined,
         twitter: formData.twitter ? normalizeUrl(formData.twitter) : undefined,
-        instagram: formData.instagram ? normalizeUrl(formData.instagram) : undefined,
-        facebook: formData.facebook ? normalizeUrl(formData.facebook) : undefined,
-        tiktok: formData.tiktok ? normalizeUrl(formData.tiktok) : undefined
+        instagram: formData.instagram
+          ? normalizeUrl(formData.instagram)
+          : undefined,
+        facebook: formData.facebook
+          ? normalizeUrl(formData.facebook)
+          : undefined,
+        tiktok: formData.tiktok ? normalizeUrl(formData.tiktok) : undefined,
       };
 
-      console.log('📝 Datos normalizados:', normalizedData);
+      console.log("📝 Datos normalizados:", normalizedData);
 
       // Invocar edge function
-      const { data, error } = await supabase.functions.invoke('complete-onboarding', {
-        body: normalizedData
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "complete-onboarding",
+        {
+          body: normalizedData,
+        },
+      );
 
       if (error) {
-        console.error('❌ Error de Edge Function:', error);
-        throw new Error(error.message || 'Error al procesar la solicitud');
+        console.error("❌ Error de Edge Function:", error);
+        throw new Error(error.message || "Error al procesar la solicitud");
       }
 
-      console.log('✅ Respuesta de onboarding:', data);
+      console.log("✅ Respuesta de onboarding:", data);
 
       if (!data?.success) {
-        throw new Error(data?.error || 'Error desconocido en el servidor');
+        throw new Error(data?.error || "Error desconocido en el servidor");
       }
 
       if (!data?.brand_id || !data?.job_id) {
-        throw new Error('Respuesta del servidor incompleta');
+        throw new Error("Respuesta del servidor incompleta");
       }
 
-      // Mostrar toast y navegar PRIMERO
-      toast.success('¡Diagnóstico iniciado!');
+      // Mostrar toast
+      toast.success("¡Diagnóstico iniciado!");
 
-      console.log('🚀 Navegando a /scanning con:', { brand_id: data.brand_id, job_id: data.job_id });
-
-      navigate('/scanning', {
+      // IMPORTANTE: Navegar PRIMERO antes de actualizar hasBrand
+      // Si actualizamos hasBrand primero, ProtectedRoute nos redirige al dashboard
+      navigate("/scanning", {
         state: {
           brand_id: data.brand_id,
-          job_id: data.job_id
-        }
+          job_id: data.job_id,
+        },
       });
+      console.log("🚀 Navegación iniciada");
 
-      // NO llamar refreshBrand aquí - AuthContext lo manejará automáticamente
-      console.log('✅ Navegación completada');
-
+      // Actualizar el estado global DESPUÉS de navegar
+      // Esto evita que ProtectedRoute nos redirija al dashboard
+      await refreshBrand();
+      console.log("✅ Estado de marca actualizado");
     } catch (error: any) {
-      console.error('❌ Error en onboarding:', error);
+      console.error("❌ Error en onboarding:", error);
 
-      if (error.message.includes('no autenticado')) {
-        toast.error('Sesión expirada. Por favor inicia sesión nuevamente.');
-        navigate('/login');
+      if (error.message.includes("no autenticado")) {
+        toast.error("Sesión expirada. Por favor inicia sesión nuevamente.");
+        navigate("/login");
       } else {
-        toast.error(error.message || 'Error al iniciar el análisis. Por favor intenta nuevamente.');
+        toast.error(
+          error.message ||
+          "Error al iniciar el análisis. Por favor intenta nuevamente.",
+        );
       }
     } finally {
       setIsLoading(false);
@@ -160,20 +191,26 @@ const Onboarding: React.FC = () => {
           <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center">
             <Zap className="text-white w-6 h-6" fill="currentColor" />
           </div>
-          <span className="text-3xl font-extrabold tracking-tighter text-slate-900 font-display">RADIKAL</span>
+          <span className="text-3xl font-extrabold tracking-tighter text-slate-900 font-display">
+            RADIKAL
+          </span>
         </div>
       </div>
 
       <div className="w-full max-w-2xl bg-white rounded-[32px] p-10 md:p-14 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
         <div className="relative z-10">
           <div className="mb-10 text-center">
-            <h1 className="text-4xl font-extrabold mb-3 tracking-tight text-slate-900 font-display">Onboarding Mágico</h1>
-            <p className="text-slate-500 text-lg">Proporciona los detalles de tu marca para iniciar el análisis inteligente.</p>
+            <h1 className="text-4xl font-extrabold mb-3 tracking-tight text-slate-900 font-display">
+              Onboarding Mágico
+            </h1>
+            <p className="text-slate-500 text-lg">
+              Proporciona los detalles de tu marca para iniciar el análisis
+              inteligente.
+            </p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
               {/* Website - OBLIGATORIO */}
               <div className="md:col-span-2 space-y-2">
                 <label className="text-sm font-bold text-slate-700 ml-1">
@@ -185,7 +222,7 @@ const Onboarding: React.FC = () => {
                     name="website"
                     value={formData.website}
                     onChange={handleChange}
-                    className={`minimal-input !pl-14 ${errors.website ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
+                    className={`minimal-input !pl-14 ${errors.website ? "border-red-300 focus:border-red-500 focus:ring-red-200" : ""}`}
                     placeholder="tuempresa.com o https://tuempresa.com"
                     type="text"
                     disabled={isLoading}
@@ -202,7 +239,8 @@ const Onboarding: React.FC = () => {
               {/* Tax ID - OPCIONAL */}
               <div className="md:col-span-2 space-y-2">
                 <label className="text-sm font-bold text-slate-700 ml-1">
-                  NIT / Identificación Fiscal <span className="text-slate-400 text-xs">(Opcional)</span>
+                  NIT / Identificación Fiscal{" "}
+                  <span className="text-slate-400 text-xs">(Opcional)</span>
                 </label>
                 <div className="relative">
                   <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -220,14 +258,16 @@ const Onboarding: React.FC = () => {
 
               {/* Redes Sociales - OPCIONALES */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">LinkedIn</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">
+                  LinkedIn
+                </label>
                 <div className="relative">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
                     name="linkedin"
                     value={formData.linkedin}
                     onChange={handleChange}
-                    className={`minimal-input !pl-14 ${errors.linkedin ? 'border-red-300 focus:border-red-500' : ''}`}
+                    className={`minimal-input !pl-14 ${errors.linkedin ? "border-red-300 focus:border-red-500" : ""}`}
                     placeholder="linkedin.com/company/..."
                     type="text"
                     disabled={isLoading}
@@ -239,14 +279,16 @@ const Onboarding: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">X (Twitter)</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">
+                  X (Twitter)
+                </label>
                 <div className="relative">
                   <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
                     name="twitter"
                     value={formData.twitter}
                     onChange={handleChange}
-                    className={`minimal-input !pl-14 ${errors.twitter ? 'border-red-300 focus:border-red-500' : ''}`}
+                    className={`minimal-input !pl-14 ${errors.twitter ? "border-red-300 focus:border-red-500" : ""}`}
                     placeholder="x.com/usuario"
                     type="text"
                     disabled={isLoading}
@@ -258,33 +300,39 @@ const Onboarding: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Instagram</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">
+                  Instagram
+                </label>
                 <div className="relative">
                   <Camera className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
                     name="instagram"
                     value={formData.instagram}
                     onChange={handleChange}
-                    className={`minimal-input !pl-14 ${errors.instagram ? 'border-red-300 focus:border-red-500' : ''}`}
+                    className={`minimal-input !pl-14 ${errors.instagram ? "border-red-300 focus:border-red-500" : ""}`}
                     placeholder="instagram.com/tu_marca"
                     type="text"
                     disabled={isLoading}
                   />
                 </div>
                 {errors.instagram && (
-                  <p className="text-red-600 text-xs ml-1">{errors.instagram}</p>
+                  <p className="text-red-600 text-xs ml-1">
+                    {errors.instagram}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Facebook</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">
+                  Facebook
+                </label>
                 <div className="relative">
                   <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
                     name="facebook"
                     value={formData.facebook}
                     onChange={handleChange}
-                    className={`minimal-input !pl-14 ${errors.facebook ? 'border-red-300 focus:border-red-500' : ''}`}
+                    className={`minimal-input !pl-14 ${errors.facebook ? "border-red-300 focus:border-red-500" : ""}`}
                     placeholder="facebook.com/tu_marca"
                     type="text"
                     disabled={isLoading}
@@ -296,14 +344,16 @@ const Onboarding: React.FC = () => {
               </div>
 
               <div className="md:col-span-2 space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">TikTok</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">
+                  TikTok
+                </label>
                 <div className="relative">
                   <Film className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
                     name="tiktok"
                     value={formData.tiktok}
                     onChange={handleChange}
-                    className={`minimal-input !pl-14 ${errors.tiktok ? 'border-red-300 focus:border-red-500' : ''}`}
+                    className={`minimal-input !pl-14 ${errors.tiktok ? "border-red-300 focus:border-red-500" : ""}`}
                     placeholder="tiktok.com/@tu_tiktok"
                     type="text"
                     disabled={isLoading}
@@ -341,9 +391,15 @@ const Onboarding: React.FC = () => {
       <footer className="mt-16 w-full max-w-4xl flex flex-col md:flex-row items-center justify-between text-slate-400 text-sm gap-6">
         <div>Radikal AI © 2025 • Edición Empresarial</div>
         <div className="flex items-center gap-8 font-medium">
-          <a href="#" className="hover:text-slate-600 transition-colors">Términos de Servicio</a>
-          <a href="#" className="hover:text-slate-600 transition-colors">Privacidad</a>
-          <a href="#" className="hover:text-slate-600 transition-colors">Protocolo de Seguridad</a>
+          <a href="#" className="hover:text-slate-600 transition-colors">
+            Términos de Servicio
+          </a>
+          <a href="#" className="hover:text-slate-600 transition-colors">
+            Privacidad
+          </a>
+          <a href="#" className="hover:text-slate-600 transition-colors">
+            Protocolo de Seguridad
+          </a>
         </div>
       </footer>
     </main>

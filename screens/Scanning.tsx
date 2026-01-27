@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Terminal, Globe, Search, Palette, Brain, Zap, AlertCircle } from 'lucide-react';
-import StatusItem from '../components/StatusItem';
+import StatusItem from '@/components/StatusItem';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../src/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import { toast } from 'sonner';
 
 const Scanning: React.FC = () => {
@@ -34,12 +34,19 @@ const Scanning: React.FC = () => {
 
   // Validar datos requeridos
   useEffect(() => {
+    console.log('🔍 Scanning - Validando datos:', { brand_id, job_id });
+    console.log('🔍 Scanning - location.state:', location.state);
+
     if (!brand_id || !job_id) {
       console.error('❌ Faltan brand_id o job_id en Scanning');
+      console.error('❌ brand_id:', brand_id);
+      console.error('❌ job_id:', job_id);
       toast.error('Datos de sesión inválidos. Redirigiendo...');
       setTimeout(() => navigate('/dashboard'), 2000);
+    } else {
+      console.log('✅ Datos válidos en Scanning:', { brand_id, job_id });
     }
-  }, [brand_id, job_id, navigate]);
+  }, [brand_id, job_id, navigate, location.state]);
 
   // Suscripción a cambios en el job
   useEffect(() => {

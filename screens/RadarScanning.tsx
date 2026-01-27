@@ -1,13 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Zap, Loader2, CheckCircle, Hourglass, Radio, ShieldCheck } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/src/lib/supabase';
+import { toast } from 'sonner';
 
-import { useNavigate } from 'react-router-dom';
+// Contador global para keys únicas
+let logKeyCounter = 0;
 
 const RadarScanning: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [progress, setProgress] = useState(0);
   const [terminalLogs, setTerminalLogs] = useState<React.ReactNode[]>([]);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const hasStarted = useRef(false); // Evitar doble ejecución
+
+  const { brand_id, settings } = location.state || {};
 
   // Status items configuration
   const statusItems = [
@@ -26,36 +34,250 @@ const RadarScanning: React.FC = () => {
   ];
 
   useEffect(() => {
+    if (!brand_id || hasStarted.current) {
+      if (!brand_id) {
+        toast.error('No se encontró información del análisis');
+        navigate('/radar');
+      }
+      return;
+    }
+
+    hasStarted.current = true;
+
     // Terminal simulation
     const initialLogs = [
-      <p key="1" className="text-secondary/80 mb-1"><span className="opacity-50">$</span> scan_init --v2</p>,
-      <p key="2" className="text-slate-500 italic">[OK] Nodes active</p>,
-      <p key="3" className="text-secondary/90">SCAN: Filtrando RSS...</p>
+      <p key={`log-${logKeyCounter++}`} className="text-secondary/80 mb-1"><span className="opacity-50">$</span> scan_init --v2</p>,
+      <p key={`log-${logKeyCounter++}`} className="text-slate-500 italic">[OK] Nodes active</p>,
+      <p key={`log-${logKeyCounter++}`} className="text-secondary/90">SCAN: Filtrando RSS...</p>
     ];
     setTerminalLogs(initialLogs);
 
+    // Iniciar el proceso completo
+    startAnalysisProcess();
+  }, [brand_id]);
+
+  // Iniciar todo el proceso: guardar settings, generar análisis, polling
+  const startAnalysisProcess = async () => {
+    try {
+      setProgress(5);
+
+      // 1. Guardar settings si vienen
+      if (settings) {
+        console.log('💾 Guardando settings...');
+        setTerminalLogs(prev => [...prev, <p key={`log-${logKeyCounter++}`} className="text-emerald-400 text-[10px]">&gt; Saving settings...</p>]);
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Guardar competidores en competitor suggestions
+        if (settings.competitors && settings.competitors.length > 0) {
+          // Eliminar competidores existentes para este brand
+          await supabase
+            .from('competitor suggestions')
+            .delete()
+            .eq('brand_id', brand_id);
+
+          // Insertar nuevos competidores
+          const competitorRecords = settings.competitors.map(link => ({
+            brand_id: brand_id,
+            link: link,
+            title: null // Opcional, se puede extraer del dominio si se desea
+          }));
+
+          const { error: competitorError } = await supabase
+            .from('competitor suggestions')
+            .insert(competitorRecords);
+
+          if (competitorError) {
+            console.error('⚠️ Error guardando competidores:', competitorError);
+          } else {
+            console.log('✅ Competidores guardados en competitor suggestions');
+          }
+        }
+
+        // Guardar otros settings en radar_settings (sin competitors)
+        const { error: settingsError } = await supabase
+          .from('radar_settings')
+          .upsert({
+            brand_id: brand_id,
+            user_id: user!.id,
+            news_channels: settings.news_channels || [],
+            emails: settings.emails || [],
+            timeframe: settings.timeframe || 'diaria',
+            is_active: true,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'brand_id'
+          });
+
+        if (settingsError) {
+          console.error('⚠️ Error guardando settings:', settingsError);
+        } else {
+          console.log('✅ Settings guardados');
+        }
+      }
+
+      setProgress(10);
+
+      // 2. Obtener información de la marca (website)
+      console.log('📊 Obteniendo información de la marca...');
+      const { data: brandData, error: brandError } = await supabase
+        .from('brands')
+        .select('website_url')
+        .eq('id', brand_id)
+        .single();
+
+      if (brandError) {
+        console.error('❌ Error obteniendo brand data:', brandError);
+      }
+
+      const companyWebsite = brandData?.website_url || '';
+
+      // 3. Generar análisis
+      console.log('🚀 Generando análisis...');
+      setTerminalLogs(prev => [...prev, <p key={`log-${logKeyCounter++}`} className="text-secondary text-[10px]">&gt; Generating analysis...</p>]);
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // Preparar el body en el formato que n8n espera
+      const webhookBody = {
+        brand_id: brand_id,
+        company_link: companyWebsite,
+        competitor_links: settings?.competitors || [],
+        news_feeds: settings?.news_channels || []
+      };
+
+      console.log('📤 Enviando al webhook:', webhookBody);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-competitor-analysis`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookBody),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al generar análisis');
+      }
+
+      console.log('✅ Análisis iniciado:', result.job_id);
+      setTerminalLogs(prev => [...prev, <p key={`log-${logKeyCounter++}`} className="text-emerald-400 text-[10px]">&gt; Analysis started: {result.job_id.slice(0, 8)}...</p>]);
+
+      setProgress(15);
+
+      // 4. Iniciar polling
+      pollAnalysis(result.job_id);
+
+    } catch (error: any) {
+      console.error('❌ Error iniciando análisis:', error);
+      toast.warning('Error al generar análisis, mostrando datos de ejemplo');
+      setTerminalLogs(prev => [...prev, <p key={`log-${logKeyCounter++}`} className="text-amber-400 text-[10px]">&gt; Using example data...</p>]);
+
+      // Simular progreso y mostrar datos de ejemplo
+      simulateProgressAndNavigate();
+    }
+  };
+
+  // Simular progreso sin polling (cuando hay error)
+  const simulateProgressAndNavigate = () => {
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(() => navigate('/radar-results'), 1000);
+          setTimeout(() => navigate('/radar-results', { state: { brand_id, error: true } }), 1000);
           return 100;
         }
 
-        // Add random logs based on progress
+        // Agregar logs aleatorios
         if (Math.random() > 0.7) {
           setTerminalLogs(prevLogs => [
             ...prevLogs,
-            <p key={Date.now()} className="text-slate-400 text-[10px]">&gt; Processing data chunk...</p>
+            <p key={`log-${logKeyCounter++}`} className="text-slate-400 text-[10px]">&gt; Loading example data...</p>
           ]);
         }
 
-        return prev + 0.5; // Slow progress for demo
+        return prev + 2; // Progreso más rápido
       });
     }, 50);
+  };
 
-    return () => clearInterval(interval);
-  }, [navigate]);
+  // Polling del análisis
+  const pollAnalysis = async (jobId: string) => {
+    const maxAttempts = 60; // 3 minutos máximo
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        attempts++;
+        console.log(`🔄 Polling análisis intento ${attempts}/${maxAttempts}`);
+
+        // IMPORTANTE: Obtener session FRESH cada vez
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+          throw new Error('Sesión expirada');
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-competitor-analysis?brand_id=${brand_id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        // Calcular progreso basado en el intento (de 15% a 95%)
+        const currentProgress = Math.min(15 + ((attempts / maxAttempts) * 80), 95);
+        setProgress(currentProgress);
+
+        // Agregar logs aleatorios
+        if (Math.random() > 0.7) {
+          setTerminalLogs(prevLogs => [
+            ...prevLogs,
+            <p key={`log-${logKeyCounter++}`} className="text-slate-400 text-[10px]">&gt; Processing data chunk...</p>
+          ]);
+        }
+
+        // Verificar si terminó
+        if (result.has_analysis) {
+          console.log('✅ Análisis completado');
+          setProgress(100);
+          toast.success('Análisis completado exitosamente');
+          setTimeout(() => navigate('/radar-results', { state: { brand_id } }), 1000);
+          return;
+        }
+
+        // Continuar polling
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 3000);
+        } else {
+          console.log('⏱️ Timeout, usando datos de ejemplo');
+          toast.warning('Análisis tomó demasiado tiempo, mostrando datos de ejemplo');
+          navigate('/radar-results', { state: { brand_id, error: true } });
+        }
+      } catch (error: any) {
+        console.error('❌ Error en polling:', error);
+        toast.warning('Error al obtener análisis, mostrando datos de ejemplo');
+        navigate('/radar-results', { state: { brand_id, error: true } });
+      }
+    };
+
+    poll();
+  };
 
   // Scroll terminal
   useEffect(() => {
@@ -138,7 +360,7 @@ const RadarScanning: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tight">
                   <span>T: 00:{Math.floor(progress * 0.6).toString().padStart(2, '0')}s</span>
-                  <span>Est: 18s</span>
+                  <span>Est: ~3min</span>
                 </div>
               </div>
             </div>
