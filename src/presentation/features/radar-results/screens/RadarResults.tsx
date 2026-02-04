@@ -95,7 +95,7 @@ const RadarResults: React.FC = () => {
             </div>
 
             <button
-              onClick={() => navigate('/radar-config', { state: { brand_id, forceNew: true } })}
+              onClick={() => navigate('/radar', { state: { brand_id, forceNew: true } })}
               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
               <RefreshCw className="w-4 h-4" />

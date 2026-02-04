@@ -19,26 +19,15 @@ const RadarConfig: React.FC = () => {
 
   // State for dynamic lists
   const [competitors, setCompetitors] = useState<string[]>([]);
-  const [newsChannels, setNewsChannels] = useState<string[]>([]);
-  const [emails, setEmails] = useState<string[]>(['usuario@empresa.com']);
-  const [emailErrors, setEmailErrors] = useState<(string | undefined)[]>([]);
-  const [timeframe, setTimeframe] = useState<string>('diaria');
+  // const [newsChannels, setNewsChannels] = useState<string[]>([]); // Removed
+  // const [emails, setEmails] = useState<string[]>(['usuario@empresa.com']); // Removed
+  // const [emailErrors, setEmailErrors] = useState<(string | undefined)[]>([]); // Removed
+  // const [timeframe, setTimeframe] = useState<string>('diaria'); // Removed
+  // const [timeframe, setTimeframe] = useState<string>('diaria'); // Removed
 
-  const timeframeOptions = [
-    { label: 'Diaria', value: 'diaria' },
-    { label: 'Semanal', value: 'semanal' },
-  ];
+  // timeframeOptions removed
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const handleSetEmails = (newEmails: string[]) => {
-    setEmails(newEmails);
-    if (emailErrors.length > 0) {
-      setEmailErrors([]);
-    }
-  };
+  // validateEmail and handleSetEmails removed
 
   // Obtener brand_id al montar
   useEffect(() => {
@@ -134,25 +123,25 @@ const RadarConfig: React.FC = () => {
     try {
       const { data: settingsData, error: settingsError } = await supabase
         .from('radar_settings')
-        .select('news_channels, emails, timeframe')
+        .select('*') // Removed specific selection
         .eq('brand_id', brand_id)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle(); // Cambiado de .single() a .maybeSingle() para evitar error si no hay datos
+        .maybeSingle();
 
       if (settingsError) {
         console.error('❌ Error cargando settings:', settingsError);
       } else if (settingsData) {
-        if (settingsData.news_channels && settingsData.news_channels.length > 0) {
-          setNewsChannels(settingsData.news_channels);
-        }
-        if (settingsData.emails && settingsData.emails.length > 0) {
-          setEmails(settingsData.emails);
-        }
-        if (settingsData.timeframe) {
-          setTimeframe(settingsData.timeframe);
-        }
+        // if (settingsData.news_channels && settingsData.news_channels.length > 0) {
+        //   setNewsChannels(settingsData.news_channels);
+        // }
+        // if (settingsData.emails && settingsData.emails.length > 0) {
+        //   setEmails(settingsData.emails);
+        // }
+        // if (settingsData.timeframe) {
+        //   setTimeframe(settingsData.timeframe);
+        // }
         console.log('✅ Settings cargados:', settingsData);
       } else {
         console.log('ℹ️ No hay settings guardados, usando valores por defecto');
@@ -163,28 +152,7 @@ const RadarConfig: React.FC = () => {
   };
 
   const onSearch = async () => {
-    const newErrors: (string | undefined)[] = [];
-    let hasError = false;
-
-    // Validar emails
-    const filledEmails = emails.filter(e => e.trim() !== '');
-    if (filledEmails.length === 0) {
-      if (emails.length > 0) {
-        newErrors[0] = "Debes ingresar un correo.";
-      }
-      hasError = true;
-    }
-
-    emails.forEach((email, index) => {
-      if (email.trim() && !validateEmail(email)) {
-        newErrors[index] = "Formato de correo inválido.";
-        hasError = true;
-      }
-    });
-
-    setEmailErrors(newErrors);
-
-    if (hasError) return;
+    // Email validation removed
 
     if (!brandId) {
       toast.error('No se encontró una marca asociada');
@@ -197,9 +165,9 @@ const RadarConfig: React.FC = () => {
       brand_id: brandId,
       settings: {
         competitors: competitors.filter(c => c.trim()),
-        news_channels: newsChannels.filter(n => n.trim()),
-        emails: filledEmails,
-        timeframe: timeframe
+        news_channels: [], // Empty
+        emails: [], // Empty
+        timeframe: 'diaria' // Default value, as UI is removed
       }
     };
 
@@ -237,7 +205,7 @@ const RadarConfig: React.FC = () => {
                 placeholder="https://competidor.com"
                 icon={Globe}
                 type="url"
-                maxItems={3}
+                // maxItems={3} // Removed limit
                 minItems={0}
                 addButtonLabel="Añadir otro competidor"
               />
@@ -248,48 +216,18 @@ const RadarConfig: React.FC = () => {
               )}
             </div>
 
-            {/* Dynamic News Channels List */}
-            <div>
-              <DynamicList
-                label="Canales de Noticias / RSS"
-                items={newsChannels}
-                setItems={setNewsChannels}
-                placeholder="URL de feed RSS o fuente sectorial"
-                icon={Rss}
-                type="url"
-                maxItems={3}
-                minItems={0}
-                addButtonLabel="Añadir otra fuente"
-              />
-              {newsChannels.length === 0 && (
-                <p className="text-xs text-amber-500 font-medium mt-2 ml-1">
-                  * Opcional: Si no inserta dato, se buscará con IA.
-                </p>
-              )}
-            </div>
+            {/* Dynamic News Channels List REMOVED */}
 
-            {/* Custom Timeframe Dropdown */}
-            <CustomDropdown
+            {/* Custom Timeframe Dropdown REMOVED */}
+            {/* <CustomDropdown
               label="Temporalidad de Búsqueda Automática"
               options={timeframeOptions}
               value={timeframe}
               onChange={setTimeframe}
               icon={CalendarClock}
-            />
+            /> */}
 
-            {/* Dynamic Emails List (Min 1) */}
-            <DynamicList
-              label="Correos para enviar reporte"
-              items={emails}
-              setItems={handleSetEmails}
-              errors={emailErrors}
-              placeholder="usuario@empresa.com"
-              icon={Mail}
-              type="email"
-              minItems={1}
-              maxItems={3}
-              addButtonLabel="Añadir otro correo"
-            />
+            {/* Dynamic Emails List REMOVED */}
 
             {/* Action Button */}
             <div className="pt-6">

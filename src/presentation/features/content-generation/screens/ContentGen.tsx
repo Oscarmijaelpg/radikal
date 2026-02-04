@@ -182,12 +182,12 @@ const ContentGen: React.FC = () => {
                   />
                 )}
 
-                {/* Platforms */}
-                <PlatformSelector
+                {/* Platforms Selector REMOVED */}
+                {/* <PlatformSelector
                   platforms={PLATFORMS}
                   activePlatform={activePlatform}
                   onSelect={setActivePlatform}
-                />
+                /> */}
 
                 {/* Media Upload */}
                 <MediaUpload
