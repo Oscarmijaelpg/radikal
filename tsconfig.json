@@ -20,7 +20,25 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
+      ],
+      "@domain/*": [
+        "./src/domain/*"
+      ],
+      "@infrastructure/*": [
+        "./src/infrastructure/*"
+      ],
+      "@features/*": [
+        "./src/presentation/features/*"
+      ],
+      "@shared/*": [
+        "./src/presentation/shared/*"
+      ],
+      "@context/*": [
+        "./src/presentation/context/*"
+      ],
+      "@core/*": [
+        "./src/core/*"
       ]
     },
     "allowImportingTsExtensions": true,

@@ -1,0 +1,75 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	deleted:    App.tsx
+	deleted:    components/ColorPicker.tsx
+	deleted:    components/CustomDropdown.tsx
+	deleted:    components/DynamicList.tsx
+	deleted:    components/EmptyState.tsx
+	deleted:    components/FloatingThemeToggle.tsx
+	deleted:    components/GlassCard.tsx
+	deleted:    components/Input.tsx
+	deleted:    components/LogoEditor.tsx
+	deleted:    components/NewsModal.tsx
+	deleted:    components/RadarChart.tsx
+	deleted:    components/RadarComparisons.tsx
+	deleted:    components/RadarCompetitors.tsx
+	deleted:    components/RadarNews.tsx
+	deleted:    components/RadarTrends.tsx
+	deleted:    components/SectionCard.tsx
+	deleted:    components/Sidebar.tsx
+	deleted:    components/SocialLinks.tsx
+	deleted:    components/StatCard.tsx
+	deleted:    components/StatusItem.tsx
+	deleted:    components/TagInput.tsx
+	deleted:    constants.ts
+	modified:   index.html
+	deleted:    index.tsx
+	modified:   package-lock.json
+	modified:   package.json
+	deleted:    screens/BrandAnalysis.tsx
+	deleted:    screens/BrandResults.tsx
+	deleted:    screens/ContentGen.tsx
+	deleted:    screens/Dashboard.tsx
+	deleted:    screens/Landing.tsx
+	deleted:    screens/Login.tsx
+	deleted:    screens/MarketRadar.tsx
+	deleted:    screens/Onboarding.tsx
+	deleted:    screens/Profile.tsx
+	deleted:    screens/RadarConfig.tsx
+	deleted:    screens/RadarResults.tsx
+	deleted:    screens/RadarScanning.tsx
+	deleted:    screens/Register.tsx
+	deleted:    screens/Scanning.tsx
+	deleted:    src/context/AuthContext.tsx
+	deleted:    src/lib/supabase.ts
+	modified:   tsconfig.json
+	deleted:    types.ts
+	modified:   vite.config.ts
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.claude/
+	add_err.txt
+	commit_out.txt
+	fix-core-types.ps1
+	fix-quotes.ps1
+	fix-shared-imports.ps1
+	git_status.txt
+	nul
+	reorganize.ps1
+	src/App.tsx
+	src/core/
+	src/domain/
+	src/infrastructure/
+	src/main.tsx
+	src/presentation/
+	status_add.txt
+	supabase_edge_functions/
+	supabase_migrations/
+	update-imports.ps1
+
+no changes added to commit (use "git add" and/or "git commit -a")
