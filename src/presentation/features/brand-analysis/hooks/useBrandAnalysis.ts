@@ -29,9 +29,8 @@ export const useBrandAnalysis = (brandId: string | null) => {
                         .select('id')
                         .eq('user_id', user.id)
                         .maybeSingle(); // Usar maybeSingle para evitar error si no existe
-
                     if (brandError) throw brandError;
-                    
+
                     if (!brandData) {
                         // Usuario no tiene marca aún
                         setIsLoading(false);
@@ -42,8 +41,8 @@ export const useBrandAnalysis = (brandId: string | null) => {
                 }
 
                 if (!currentBrandId) {
-                     // Si falló todo intento de obtener ID
-                     throw new Error('No se pudo identificar la marca');
+                    // Si falló todo intento de obtener ID
+                    throw new Error('No se pudo identificar la marca');
                 }
 
                 // 2. Teniendo el ID, invocar la Edge Function
@@ -71,46 +70,46 @@ export const useBrandAnalysis = (brandId: string | null) => {
                         brandName: diag.brand_name || diagnosticData.brand_name || 'Marca Detectada',
                         description: diag.description || 'Descripción no disponible.',
                         socials: {
-                            website: diag.social_media_detected?.website || diag.social?.website || '',
-                            instagram: diag.social_media_detected?.instagram || diag.social?.instagram || '',
-                            facebook: diag.social_media_detected?.facebook || diag.social?.facebook || '',
-                            tiktok: diag.social_media_detected?.tiktok || diag.social?.tiktok || ''
+                            website: diag.social?.website || diag.social_media_detected?.website || '',
+                            instagram: diag.social?.instagram || diag.social_media_detected?.instagram || '',
+                            facebook: diag.social?.facebook || diag.social_media_detected?.facebook || '',
+                            tiktok: diag.social?.tiktok || diag.social_media_detected?.tiktok || ''
                         },
                         productTags: diag.products_detected || [],
-                        colors: (diag.colors_detected || diag.branding?.colors_detected || []).map((c: any) => (typeof c === 'string' ? c : c.hex)),
-                        brandKeywords: diag.brand_keywords || diag.branding?.brand_keywords || [],
+                        colors: (diag.branding?.colors_detected || diag.colors_detected || []).map((c: any) => (typeof c === 'string' ? c : c.hex)),
+                        brandKeywords: diag.branding?.brand_keywords || diag.brand_keywords || [],
                         seoKeywords: diag.seo_keywords || [],
                         logo: {
                             url: diag.logo?.url || null,
                             base64: sanitizeBase64(diag.logo?.base64, diag.logo?.mime_type || diag.logo?.mimeType)
                         },
-                        // Branding (expandido) - leer de diag.branding
-                        typography: diag.typography || diag.branding?.typography || [],
-                        visual_style: diag.visual_style || diag.branding?.visual_style || [],
-                        palette_named: diag.palette_named || diag.branding?.palette_named || undefined,
-                        logo_notes: diag.logo_notes || diag.branding?.logo_notes || undefined,
-                        // Positioning - leer de diag.positioning
-                        slogan: diag.slogan || diag.positioning?.slogan || undefined,
-                        identity_message: diag.identity_message || diag.positioning?.identity_message || undefined,
-                        value_proposition: diag.value_proposition || diag.positioning?.value_proposition || undefined,
-                        differentiators: diag.differentiators || diag.positioning?.differentiators || [],
-                        brand_personality: diag.brand_personality || diag.positioning?.brand_personality || [],
-                        key_messages: diag.key_messages || diag.positioning?.key_messages || [],
-                        // History - leer de diag.history
-                        history_summary: diag.history_summary || diag.history?.summary || undefined,
-                        origin: diag.origin || diag.history?.origin || undefined,
-                        timeline: diag.timeline || diag.history?.timeline || [],
-                        milestones: diag.milestones || diag.history?.milestones || [],
-                        // Audience - leer de diag.audience
-                        audience_segments: diag.audience_segments || diag.audience?.segments || [],
-                        demographics: diag.demographics || diag.audience?.demographics || undefined,
-                        psychographics: diag.psychographics || diag.audience?.psychographics || undefined,
-                        // Operations - leer de diag.operations
-                        locations: diag.locations || diag.operations?.locations || [],
-                        employees: diag.employees || diag.operations?.employees || undefined,
-                        production_capacity: diag.production_capacity || diag.operations?.production_capacity || undefined,
-                        technology: diag.technology || diag.operations?.technology || [],
-                        b2b_services: diag.b2b_services || diag.operations?.b2b_services || []
+                        // Branding
+                        typography: diag.branding?.typography || diag.typography || [],
+                        visual_style: diag.branding?.visual_style || diag.visual_style || [],
+                        palette_named: diag.branding?.palette_named || diag.palette_named || undefined,
+                        logo_notes: diag.branding?.logo_notes || diag.logo_notes || undefined,
+                        // Positioning
+                        slogan: diag.positioning?.slogan || diag.slogan || undefined,
+                        identity_message: diag.positioning?.identity_message || diag.identity_message || undefined,
+                        value_proposition: diag.positioning?.value_proposition || diag.value_proposition || undefined,
+                        differentiators: diag.positioning?.differentiators || diag.differentiators || [],
+                        brand_personality: diag.positioning?.brand_personality || diag.brand_personality || [],
+                        key_messages: diag.positioning?.key_messages || diag.key_messages || [],
+                        // History
+                        history_summary: diag.history?.summary || diag.history_summary || undefined,
+                        origin: diag.history?.origin || diag.origin || undefined,
+                        timeline: diag.history?.timeline || diag.timeline || [],
+                        milestones: diag.history?.milestones || diag.milestones || [],
+                        // Audience
+                        audience_segments: diag.audience?.segments || diag.audience_segments || [],
+                        demographics: diag.audience?.demographics || diag.demographics || undefined,
+                        psychographics: diag.audience?.psychographics || diag.psychographics || undefined,
+                        // Operations
+                        locations: diag.operations?.locations || diag.locations || [],
+                        employees: diag.operations?.employees || diag.employees || undefined,
+                        production_capacity: diag.operations?.production_capacity || diag.production_capacity || undefined,
+                        technology: diag.operations?.technology || diag.technology || [],
+                        b2b_services: diag.operations?.b2b_services || diag.b2b_services || []
                     };
 
                     setData(initialData);

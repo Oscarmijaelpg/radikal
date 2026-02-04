@@ -133,7 +133,6 @@ const BrandAnalysis: React.FC = () => {
     }
   };
 
-  // Run new diagnostic
   const handleRunDiagnostic = async () => {
     if (!brandId) {
       toast.error('No se encontró el ID de la marca');
@@ -143,22 +142,34 @@ const BrandAnalysis: React.FC = () => {
     setIsRunningDiagnostic(true);
 
     try {
+      // ✅ CORREGIDO: Ahora incluye brand_id en el body
       const diagnosticData = {
+        brand_id: brandId,  // ← ESTO FALTABA
         website: data?.socials.website || '',
         instagram: data?.socials.instagram || '',
-        tax_id: '', // Not stored in diagnostic data
+        facebook: data?.socials.facebook || '',
+        linkedin: data?.socials.linkedin || '',
+        twitter: data?.socials.twitter || '',
+        tiktok: data?.socials.tiktok || '',
+        tax_id: '', // Optional
       };
+
+      console.log('🚀 Enviando diagnóstico con datos:', diagnosticData);
 
       const { data: response, error } = await supabase.functions.invoke(
         'complete-onboarding',
         { body: diagnosticData }
       );
 
+      console.log('📨 Respuesta de complete-onboarding:', response);
+      console.log('❌ Error (si existe):', error);
+
       if (error) throw new Error(error.message || 'Error al procesar la solicitud');
       if (!response?.success) throw new Error(response?.error || 'Error desconocido en el servidor');
       if (!response?.brand_id || !response?.job_id) throw new Error('Respuesta del servidor incompleta');
 
       toast.success('¡Diagnóstico iniciado!');
+
       navigate('/scanning', {
         state: {
           brand_id: response.brand_id,
@@ -166,12 +177,13 @@ const BrandAnalysis: React.FC = () => {
         },
       });
     } catch (error: any) {
-      console.error('Error en diagnóstico:', error);
+      console.error('❌ Error en diagnóstico:', error);
       toast.error(error.message || 'Error al iniciar el diagnóstico');
     } finally {
       setIsRunningDiagnostic(false);
     }
   };
+
 
   // Loading state
   if (isLoading) {

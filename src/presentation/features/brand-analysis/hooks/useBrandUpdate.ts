@@ -27,9 +27,35 @@ export const useBrandUpdate = (brandId: string | null) => {
                 return JSON.stringify(currentData.productTags) !== JSON.stringify(originalData.productTags);
             case 'branding':
                 return JSON.stringify(currentData.colors) !== JSON.stringify(originalData.colors) ||
-                    JSON.stringify(currentData.brandKeywords) !== JSON.stringify(originalData.brandKeywords);
+                    JSON.stringify(currentData.brandKeywords) !== JSON.stringify(originalData.brandKeywords) ||
+                    JSON.stringify(currentData.typography) !== JSON.stringify(originalData.typography) ||
+                    JSON.stringify(currentData.visual_style) !== JSON.stringify(originalData.visual_style) ||
+                    currentData.palette_named !== originalData.palette_named ||
+                    currentData.logo_notes !== originalData.logo_notes;
             case 'seo':
                 return JSON.stringify(currentData.seoKeywords) !== JSON.stringify(originalData.seoKeywords);
+            case 'positioning':
+                return currentData.slogan !== originalData.slogan ||
+                    currentData.identity_message !== originalData.identity_message ||
+                    currentData.value_proposition !== originalData.value_proposition ||
+                    JSON.stringify(currentData.differentiators) !== JSON.stringify(originalData.differentiators) ||
+                    JSON.stringify(currentData.brand_personality) !== JSON.stringify(originalData.brand_personality) ||
+                    JSON.stringify(currentData.key_messages) !== JSON.stringify(originalData.key_messages);
+            case 'history':
+                return currentData.history_summary !== originalData.history_summary ||
+                    currentData.origin !== originalData.origin ||
+                    JSON.stringify(currentData.timeline) !== JSON.stringify(originalData.timeline) ||
+                    JSON.stringify(currentData.milestones) !== JSON.stringify(originalData.milestones);
+            case 'audience':
+                return JSON.stringify(currentData.audience_segments) !== JSON.stringify(originalData.audience_segments) ||
+                    currentData.demographics !== originalData.demographics ||
+                    currentData.psychographics !== originalData.psychographics;
+            case 'operations':
+                return JSON.stringify(currentData.locations) !== JSON.stringify(originalData.locations) ||
+                    currentData.employees !== originalData.employees ||
+                    currentData.production_capacity !== originalData.production_capacity ||
+                    JSON.stringify(currentData.technology) !== JSON.stringify(originalData.technology) ||
+                    JSON.stringify(currentData.b2b_services) !== JSON.stringify(originalData.b2b_services);
             default:
                 return false;
         }
@@ -117,10 +143,44 @@ export const useBrandUpdate = (brandId: string | null) => {
             if (section === 'branding') {
                 diagnosticUpdate.colors_detected = currentData.colors.map(c => ({ hex: c, name: '' }));
                 diagnosticUpdate.brand_keywords = currentData.brandKeywords;
+                diagnosticUpdate.typography = currentData.typography;
+                diagnosticUpdate.visual_style = currentData.visual_style;
+                diagnosticUpdate.palette_named = currentData.palette_named;
+                diagnosticUpdate.logo_notes = currentData.logo_notes;
             }
 
             if (section === 'seo') {
                 diagnosticUpdate.seo_keywords = currentData.seoKeywords;
+            }
+
+            if (section === 'positioning') {
+                diagnosticUpdate.slogan = currentData.slogan;
+                diagnosticUpdate.identity_message = currentData.identity_message;
+                diagnosticUpdate.value_proposition = currentData.value_proposition;
+                diagnosticUpdate.differentiators = currentData.differentiators;
+                diagnosticUpdate.brand_personality = currentData.brand_personality;
+                diagnosticUpdate.key_messages = currentData.key_messages;
+            }
+
+            if (section === 'history') {
+                diagnosticUpdate.history_summary = currentData.history_summary;
+                diagnosticUpdate.origin = currentData.origin;
+                diagnosticUpdate.timeline = currentData.timeline;
+                diagnosticUpdate.milestones = currentData.milestones;
+            }
+
+            if (section === 'audience') {
+                diagnosticUpdate.audience_segments = currentData.audience_segments;
+                diagnosticUpdate.demographics = currentData.demographics;
+                diagnosticUpdate.psychographics = currentData.psychographics;
+            }
+
+            if (section === 'operations') {
+                diagnosticUpdate.locations = currentData.locations;
+                diagnosticUpdate.employees = currentData.employees;
+                diagnosticUpdate.production_capacity = currentData.production_capacity;
+                diagnosticUpdate.technology = currentData.technology;
+                diagnosticUpdate.b2b_services = currentData.b2b_services;
             }
 
             // 3. UPSERT to initial_diagnostics

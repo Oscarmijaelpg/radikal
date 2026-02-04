@@ -94,67 +94,68 @@ serve(async (req) => {
             }
 
             response.diagnostic = {
-                brand_name: diagnostic.brand_name || brand.name || 'Marca',
-                domain: diagnostic.domain || null,
-                description: diagnostic.description || brand.description || null,
+                brand_id: brandId,
+                brand_name: diagnostic.brand_name || rawData?.brand_name || brand.name || 'Marca Detectada',
+                domain: diagnostic.domain || rawData?.domain || null,
+                description: diagnostic.description || rawData?.description || brand.description || 'Descripción no disponible.',
 
-                // Campos básicos
-                colors_detected: diagnostic.colors_detected || [],
-                brand_keywords: diagnostic.brand_keywords || [],
-                products_detected: diagnostic.products_detected || [],
-                seo_keywords: diagnostic.seo_keywords || [],
+                // Campos básicos con fallback a rawData
+                colors_detected: (diagnostic.colors_detected && diagnostic.colors_detected.length > 0) ? diagnostic.colors_detected : (rawData?.branding?.colors_detected || rawData?.colors_detected || []),
+                brand_keywords: (diagnostic.brand_keywords && diagnostic.brand_keywords.length > 0) ? diagnostic.brand_keywords : (rawData?.branding?.brand_keywords || rawData?.brand_keywords || []),
+                products_detected: (diagnostic.products_detected && diagnostic.products_detected.length > 0) ? diagnostic.products_detected : (rawData?.products_detected || []),
+                seo_keywords: (diagnostic.seo_keywords && diagnostic.seo_keywords.length > 0) ? diagnostic.seo_keywords : (rawData?.seo_keywords || []),
 
                 logo: {
-                    url: diagnostic.logo_url || brand.logo_url || null,
-                    base64: diagnostic.logo_base64 || brand.logo_base64 || null,
-                    mime_type: diagnostic.logo_mime_type || null,
-                    mimeType: diagnostic.logo_mime_type || null
+                    url: diagnostic.logo_url || rawData?.logo?.url || brand.logo_url || null,
+                    base64: diagnostic.logo_base64 || rawData?.logo?.base64 || brand.logo_base64 || null,
+                    mime_type: diagnostic.logo_mime_type || rawData?.logo?.mime_type || rawData?.logo?.mimeType || null,
+                    mimeType: diagnostic.logo_mime_type || rawData?.logo?.mimeType || rawData?.logo?.mime_type || null
                 },
 
-                product_images: diagnostic.product_images || [],
-                social_media_detected: diagnostic.social_media_detected || {},
-                sources: diagnostic.sources || [],
+                product_images: (diagnostic.product_images && diagnostic.product_images.length > 0) ? diagnostic.product_images : (rawData?.product_images || rawData?.downloaded_product_images || []),
+                social_media_detected: diagnostic.social_media_detected || rawData?.social_media_detected || rawData?.social || {},
+                sources: diagnostic.sources || rawData?.sources || [],
 
                 // NUEVOS CAMPOS - Objetos anidados desde raw_response
                 social: rawData?.social || diagnostic.social_media_detected || null,
 
-                branding: rawData?.branding || {
-                    colors_detected: diagnostic.colors_detected || [],
-                    brand_keywords: diagnostic.brand_keywords || [],
-                    typography: diagnostic.typography || [],
-                    visual_style: diagnostic.visual_style || [],
-                    palette_named: diagnostic.palette_named || null,
-                    logo_notes: diagnostic.logo_notes || null
+                branding: {
+                    colors_detected: (diagnostic.colors_detected && diagnostic.colors_detected.length > 0) ? diagnostic.colors_detected : (rawData?.branding?.colors_detected || []),
+                    brand_keywords: (diagnostic.brand_keywords && diagnostic.brand_keywords.length > 0) ? diagnostic.brand_keywords : (rawData?.branding?.brand_keywords || []),
+                    typography: (diagnostic.typography && diagnostic.typography.length > 0) ? diagnostic.typography : (rawData?.branding?.typography || []),
+                    visual_style: (diagnostic.visual_style && diagnostic.visual_style.length > 0) ? diagnostic.visual_style : (rawData?.branding?.visual_style || []),
+                    palette_named: diagnostic.palette_named || rawData?.branding?.palette_named || null,
+                    logo_notes: diagnostic.logo_notes || rawData?.branding?.logo_notes || null
                 },
 
-                positioning: rawData?.positioning || {
-                    slogan: diagnostic.slogan || null,
-                    identity_message: diagnostic.identity_message || null,
-                    value_proposition: diagnostic.value_proposition || null,
-                    differentiators: diagnostic.differentiators || [],
-                    brand_personality: diagnostic.brand_personality || [],
-                    key_messages: diagnostic.key_messages || []
+                positioning: {
+                    slogan: diagnostic.slogan || rawData?.positioning?.slogan || null,
+                    identity_message: diagnostic.identity_message || rawData?.positioning?.identity_message || null,
+                    value_proposition: diagnostic.value_proposition || rawData?.positioning?.value_proposition || null,
+                    differentiators: (diagnostic.differentiators && diagnostic.differentiators.length > 0) ? diagnostic.differentiators : (rawData?.positioning?.differentiators || []),
+                    brand_personality: (diagnostic.brand_personality && diagnostic.brand_personality.length > 0) ? diagnostic.brand_personality : (rawData?.positioning?.brand_personality || []),
+                    key_messages: (diagnostic.key_messages && diagnostic.key_messages.length > 0) ? diagnostic.key_messages : (rawData?.positioning?.key_messages || [])
                 },
 
-                history: rawData?.history || {
-                    summary: diagnostic.history_summary || null,
-                    origin: diagnostic.origin || null,
-                    timeline: diagnostic.timeline || [],
-                    milestones: diagnostic.milestones || []
+                history: {
+                    summary: diagnostic.history_summary || rawData?.history?.summary || null,
+                    origin: diagnostic.origin || rawData?.history?.origin || null,
+                    timeline: (diagnostic.timeline && diagnostic.timeline.length > 0) ? diagnostic.timeline : (rawData?.history?.timeline || []),
+                    milestones: (diagnostic.milestones && diagnostic.milestones.length > 0) ? diagnostic.milestones : (rawData?.history?.milestones || [])
                 },
 
-                audience: rawData?.audience || {
-                    segments: diagnostic.audience_segments || [],
-                    demographics: diagnostic.demographics || null,
-                    psychographics: diagnostic.psychographics || null
+                audience: {
+                    segments: (diagnostic.audience_segments && diagnostic.audience_segments.length > 0) ? diagnostic.audience_segments : (rawData?.audience?.segments || []),
+                    demographics: diagnostic.demographics || rawData?.audience?.demographics || null,
+                    psychographics: diagnostic.psychographics || rawData?.audience?.psychographics || null
                 },
 
-                operations: rawData?.operations || {
-                    locations: diagnostic.locations || [],
-                    employees: diagnostic.employees || null,
-                    production_capacity: diagnostic.production_capacity || null,
-                    technology: diagnostic.technology || [],
-                    b2b_services: diagnostic.b2b_services || []
+                operations: {
+                    locations: (diagnostic.locations && diagnostic.locations.length > 0) ? diagnostic.locations : (rawData?.operations?.locations || []),
+                    employees: diagnostic.employees || rawData?.operations?.employees || null,
+                    production_capacity: diagnostic.production_capacity || rawData?.operations?.production_capacity || null,
+                    technology: (diagnostic.technology && diagnostic.technology.length > 0) ? diagnostic.technology : (rawData?.operations?.technology || []),
+                    b2b_services: (diagnostic.b2b_services && diagnostic.b2b_services.length > 0) ? diagnostic.b2b_services : (rawData?.operations?.b2b_services || [])
                 },
 
                 // También incluir campos planos para backward compatibility
