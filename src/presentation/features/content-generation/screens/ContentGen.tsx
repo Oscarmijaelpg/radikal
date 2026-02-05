@@ -40,9 +40,19 @@ const ContentGen: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [activePlatform, setActivePlatform] = useState('Instagram');
 
+  // Debug Logs
+  console.log('🔄 ContentGen Render', {
+    selectedCardId: typeof selectedCard === 'object' ? selectedCard?.id : selectedCard,
+    uploadedFilesCount: uploadedFiles.length,
+    isGeneratingImage,
+    brandId
+  });
+
   // Handlers
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📂 handleFileUpload triggered');
     const files = Array.from(e.target.files || []);
+    console.log('📂 files selected:', files.length);
     setUploadedFiles((prev) => [...prev, ...files]);
   };
 
@@ -51,28 +61,37 @@ const ContentGen: React.FC = () => {
   };
 
   const onGenerate = async () => {
+    console.log('🚀 onGenerate triggered');
+
     if (!selectedCard) {
+      console.log('❌ No card selected');
       toast.error('Selecciona una recomendación o personalizada');
       return;
     }
 
     if (selectedCard === 'custom' && !customPrompt.trim()) {
+      console.log('❌ Custom prompt empty');
       toast.error('Escribe un prompt personalizado');
       return;
     }
 
     if (!brandId) {
+      console.log('❌ No brand ID');
       toast.error('No se encontró la marca');
       return;
     }
 
-    await generateImage(
-      selectedCard,
-      customPrompt,
-      activePlatform,
-      uploadedFiles,
-      brandId
-    );
+    try {
+      await generateImage(
+        selectedCard,
+        customPrompt,
+        activePlatform,
+        uploadedFiles,
+        brandId
+      );
+    } catch (error) {
+      console.error('❌ Error caught in onGenerate:', error);
+    }
   };
 
   const handleRegenerate = () => {
